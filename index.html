@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1890s Old-Style News Poster Generator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Special+Elite&family=UnifrakturMaguntia&family=Vollkorn:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- html2canvas CDN for PNG Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        .font-masthead { font-family: 'UnifrakturMaguntia', cursive; }
+        .font-headline { font-family: 'Cinzel Decorative', serif; }
+        .font-subhead { font-family: 'Playfair Display', serif; }
+        .font-body { font-family: 'Vollkorn', serif; }
+        .font-typewriter { font-family: 'Special Elite', monospace; }
+        
+        /* Aged paper background texture effect */
+        .aged-paper {
+            background-color: #f6ecdc;
+            background-image: radial-gradient(circle, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.08) 100%);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        }
+        
+        /* Sepia filter for uploaded photos */
+        .sepia-photo {
+            filter: sepia(0.85) contrast(1.15) brightness(0.9);
+            border: 4px double #2c221e;
+        }
+
+        /* --- BORDER STYLES --- */
+        .border-style-double { border: 8px double #1c1917 !important; }
+        .border-style-solid { border: 6px solid #1c1917 !important; }
+        .border-style-dotted { border: 6px dotted #1c1917 !important; }
+        .border-style-thick-thin { border: 10px groove #1c1917 !important; }
+
+        /* Victorian Corner Filigree Border */
+        .border-style-filigree {
+            border: 4px double #1c1917 !important;
+            outline: 2px solid #1c1917;
+            outline-offset: -10px;
+        }
+
+        /* Gothic Trefoil / Ornate Frame */
+        .border-style-gothic {
+            border: 12px double #1c1917 !important;
+            outline: 3px dashed #1c1917;
+            outline-offset: -14px;
+        }
+
+        /* Greek Key / Meander Accent Frame */
+        .border-style-greek {
+            border: 6px solid #1c1917 !important;
+            box-shadow: inset 0 0 0 4px #f6ecdc, inset 0 0 0 8px #1c1917, inset 0 0 0 10px #f6ecdc, inset 0 0 0 12px #1c1917;
+        }
+
+        /* Corner Filigree Ornaments */
+        .filigree-corner {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            font-size: 24px;
+            line-height: 1;
+            color: #1c1917;
+            pointer-events: none;
+            user-select: none;
+            display: none;
+        }
+        .corner-tl { top: 8px; left: 8px; }
+        .corner-tr { top: 8px; right: 8px; transform: scaleX(-1); }
+        .corner-bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+        .corner-br { bottom: 8px; right: 8px; transform: scale(-1); }
+
+        /* Stamp Overlay Styling */
+        .stamp-badge {
+            font-family: 'Cinzel Decorative', serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            mix-blend-mode: multiply;
+            opacity: 0.85;
+            user-select: none;
+            pointer-events: none;
+            transition: all 0.2s ease;
+        }
+
+        .stamp-red { color: #991b1b; border-color: #991b1b; }
+        .stamp-black { color: #1c1917; border-color: #1c1917; }
+        .stamp-sepia { color: #78350f; border-color: #78350f; }
+
+        /* Circular Stamp Layout */
+        .stamp-circular-ibarra {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 4px double currentColor;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8px;
+            position: relative;
+            box-shadow: inset 0 0 0 2px currentColor;
+        }
+
+        .stamp-rectangular {
+            padding: 8px 16px;
+            border: 4px double currentColor;
+            display: inline-block;
+            font-size: 1.25rem;
+            transform: rotate(-12deg);
+        }
+
+        /* Custom scrollbar for control panel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1c1917; }
+        ::-webkit-scrollbar-thumb { background: #44403c; border-radius: 4px; }
+
+        /* Print Media Styles */
+        @media print {
+            body * { visibility: hidden; }
+            #poster-container, #poster-container * { visibility: visible; }
+            #poster-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                max-width: none;
+                box-shadow: none !important;
+                background-color: #f6ecdc !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                margin: 0;
+                padding: 20mm;
+            }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-stone-950 text-stone-900 font-body min-h-screen flex flex-col xl:flex-row">
+
+    <!-- CONTROL PANEL (Sidebar) -->
+    <div class="w-full xl:w-[440px] bg-stone-900 text-stone-200 p-6 flex flex-col gap-6 no-print shadow-2xl border-r border-stone-800 z-10">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold font-subhead tracking-wider text-amber-500">1890s Ibarra Crisostomo Gazette Studio</h1>
+                <p class="text-xs text-stone-400 mt-1">Auto-saves to browser local storage.</p>
+            </div>
+            <button onclick="resetToDefaults()" title="Reset to default settings" class="text-xs bg-stone-800 hover:bg-red-900/60 text-stone-300 px-2 py-1.5 rounded border border-stone-700 transition-colors">
+                Reset
+            </button>
+        </div>
+
+        <div class="space-y-5 overflow-y-auto pr-2" style="max-height: calc(100vh - 220px);">
+
+            <!-- Border & Stamp Controls -->
+            <div class="space-y-3 bg-stone-800/60 p-4 rounded-lg border border-stone-700/50">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 font-typewriter">Styling & Official Stamps</h3>
+                
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Outer Border Style</label>
+                    <select id="select-border-style" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                        <option value="border-style-double">Classic Double Line</option>
+                        <option value="border-style-filigree">Victorian Filigree & Corner Accents</option>
+                        <option value="border-style-gothic">Gothic Antique Double Frame</option>
+                        <option value="border-style-greek">Historical Greek / Multi-Rule Frame</option>
+                        <option value="border-style-thick-thin">Grooved Heavy Frame</option>
+                        <option value="border-style-solid">Heavy Solid Border</option>
+                        <option value="border-style-dotted">Victorian Dotted Rule</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Official Stamp Overlay</label>
+                    <select id="select-stamp-type" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                        <option value="none">None</option>
+                        <option value="ibarra">Ibarra Crisostomo (Circular Official Seal)</option>
+                        <option value="approved">APPROVED</option>
+                        <option value="extra">EXTRA EDITION</option>
+                        <option value="confidential">CONFIDENTIAL</option>
+                    </select>
+                </div>
+
+                <div id="stamp-color-container">
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Stamp Ink Color</label>
+                    <select id="select-stamp-color" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                        <option value="stamp-red">Crimson Red Ink</option>
+                        <option value="stamp-black">Vintage Black Ink</option>
+                        <option value="stamp-sepia">Aged Sepia Brown</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Newspaper Meta -->
+            <div class="space-y-3 bg-stone-800/60 p-4 rounded-lg border border-stone-700/50">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 font-typewriter">Masthead & Meta</h3>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Gazette Title</label>
+                    <input type="text" id="input-title" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-stone-300 mb-1">Date</label>
+                        <input type="text" id="input-date" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-stone-300 mb-1">Bayan</label>
+                        <input type="text" id="input-price" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Publisher / Maker Name</label>
+                    <input type="text" id="input-publisher" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                </div>
+            </div>
+
+            <!-- Main Story -->
+            <div class="space-y-3 bg-stone-800/60 p-4 rounded-lg border border-stone-700/50">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 font-typewriter">Lead Headline & Story</h3>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Main Headline</label>
+                    <input type="text" id="input-headline" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Subheadline</label>
+                    <input type="text" id="input-subhead" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Lead Story Body</label>
+                    <textarea id="input-body" rows="4" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+            </div>
+
+            <!-- Photo Uploader -->
+            <div class="space-y-3 bg-stone-800/60 p-4 rounded-lg border border-stone-700/50">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 font-typewriter">L A R A W A N</h3>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Upload Portrait or Sketch</label>
+                    <input type="file" id="input-photo" accept="image/*" class="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-600 file:text-stone-950 hover:file:bg-amber-500 cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Photo Caption</label>
+                    <input type="text" id="input-caption" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                </div>
+            </div>
+
+            <!-- Secondary Story -->
+            <div class="space-y-3 bg-stone-800/60 p-4 rounded-lg border border-stone-700/50">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 font-typewriter">Secondary Article</h3>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Secondary Headline</label>
+                    <input type="text" id="input-sec-headline" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-stone-300 mb-1">Secondary Story Body</label>
+                    <textarea id="input-sec-body" rows="3" class="w-full bg-stone-900 border border-stone-700 rounded px-3 py-2 text-sm text-stone-100 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+            </div>
+
+            <!-- Classifieds / For Sale Section -->
+            <div class="space-y-3 bg-stone-800/60 p-4 rounded-lg border border-stone-700/50">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-400 font-typewriter">MGA KAGAMITANG MAAARING IBENTA</h3>
+                <div id="classifieds-editor-list" class="space-y-2">
+                    <!-- Dynamically populated via JS -->
+                </div>
+                <button onclick="addClassifiedItem()" class="w-full bg-stone-700 hover:bg-stone-600 text-stone-200 text-xs font-bold py-2 px-3 rounded transition-colors">
+                    + Magdagdag ng Ibebenta
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col gap-2 pt-2">
+            <button onclick="downloadAsPNG()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-stone-100 font-bold py-3 px-4 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2 font-typewriter text-xs tracking-wide">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                DOWNLOAD AS PNG IMAGE
+            </button>
+
+            <button onclick="window.print()" class="w-full bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold py-3 px-4 rounded-lg shadow-lg transition-colors flex items-center justify-center gap-2 font-typewriter text-xs tracking-wide">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                PRINT POSTER / SAVE AS PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- PREVIEW AREA (Poster) -->
+    <div class="flex-1 p-6 md:p-12 flex justify-center items-center bg-stone-950 overflow-auto">
+        <div id="poster-container" class="aged-paper w-[800px] max-w-full p-8 md:p-12 relative border-style-double text-stone-900">
+            
+            <!-- CORNER FILIGREE ORNAMENTS -->
+            <div class="filigree-corner corner-tl">❦</div>
+            <div class="filigree-corner corner-tr">❦</div>
+            <div class="filigree-corner corner-bl">❦</div>
+            <div class="filigree-corner corner-br">❦</div>
+
+            <!-- STAMP OVERLAY -->
+            <div id="stamp-overlay" class="absolute top-10 right-10 stamp-badge stamp-black rotate-[-15deg]">
+                <div class="stamp-circular-ibarra">
+                    <div class="text-[9px] tracking-widest uppercase font-bold">★ SEAL OF ★</div>
+                    <div class="text-[12px] font-bold leading-tight my-0.5">IBARRA CRISOSTOMO</div>
+                    <div class="text-[8px] tracking-widest font-typewriter">OFFICIAL GAZETTE</div>
+                    <div class="text-[9px] mt-0.5 font-bold">1890</div>
+                </div>
+            </div>
+
+            <!-- Top Header Banner -->
+            <div class="text-center border-b-2 border-stone-900 pb-3 mb-3">
+                <div class="flex justify-between items-center text-xs font-typewriter tracking-widest uppercase border-b border-stone-900 pb-1 mb-2">
+                    <span id="preview-date">October 14, 1900</span>
+                    <span id="preview-price">Ciudad De Paseo</span>
+                    <span id="preview-vol">Vol. XXIV — No. 312</span>
+                </div>
+                <h1 id="preview-title" class="font-masthead text-5xl md:text-7xl tracking-normal my-1">Ang Pang-araw-araw na Pabalitaan</h1>
+                <p class="font-typewriter text-[11px] uppercase tracking-widest text-stone-800">Inililimbag Araw-araw sa Kapakanan ng Katotohanan, Kalakalan, at mga Bagong Katha.</p>
+            </div>
+
+            <!-- Double Rule Divider -->
+            <div class="border-t-2 border-b border-stone-900 h-[5px] my-4"></div>
+
+            <!-- Main Headline Section -->
+            <div class="text-center my-6 px-4">
+                <h2 id="preview-headline" class="font-headline text-2xl md:text-4xl font-bold uppercase leading-tight tracking-wide text-stone-950">
+                    PARA SA MAMAMAYAN NG CIUDAD DE PASEO!
+                </h2>
+                <h3 id="preview-subhead" class="font-subhead italic text-lg md:text-xl text-stone-800 mt-2">
+                    
+                </h3>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-stone-900 my-4"></div>
+
+            <!-- Multi-Column Body Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-justify">
+                
+                <!-- Column 1: Lead Story -->
+                <div class="md:col-span-2 space-y-3">
+                    <p class="font-body text-sm md:text-base leading-relaxed">
+                        <span id="drop-cap" class="float-left font-headline text-4xl font-bold leading-none pr-2 pt-1 text-stone-900">Y</span>
+                        <span id="preview-body">esterday afternoon, a momentous trial of the new electric street railway took place amidst throngs of cheering spectators. Engineers report flawless conduction along the primary copper lines. Critics who once doubted the feasibility of harnessing invisible galvanic currents are now forced to reconsider the dawn of a new mechanical age.</span>
+                    </p>
+                    <p class="font-body text-sm md:text-base leading-relaxed">
+                        Municipal authorities have confirmed that expansion to the uptown districts shall commence before the first winter frost. Shareholders are advised to secure their certificates promptly at the downtown exchange.
+                    </p>
+
+                    <!-- Secondary Story inside Col 1/2 -->
+                    <div class="border-t border-stone-900 pt-3 mt-4">
+                        <h4 id="preview-sec-headline" class="font-headline text-sm font-bold uppercase mb-2 tracking-wide text-stone-950">MYSTERIOUS AIRSHIP SIGHTED OVER THE HARBOR</h4>
+                        <p id="preview-sec-body" class="font-body text-xs md:text-sm leading-relaxed">
+                            Dozens of startled dockworkers reported witnessing a cigar-shaped vessel gliding silently through the night clouds propelled by roaring propellers of unknown design.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Column 2 / Sidebar: Photo & Classifieds -->
+                <div class="space-y-6 border-t md:border-t-0 md:border-l border-stone-900 pt-6 md:pt-0 md:pl-6 flex flex-col justify-between">
+                    
+                    <!-- Photo Slot -->
+                    <div class="space-y-2 text-center">
+                        <div class="w-full bg-stone-300 min-h-[160px] flex items-center justify-center overflow-hidden bg-stone-200 border border-stone-400">
+                            <img id="preview-image" src="" alt="Portrait" class="w-full h-auto object-cover sepia-photo hidden">
+                            <span id="image-placeholder-text" class="font-typewriter text-xs text-stone-600 p-4"> [ ILAGAY ANG LARAWAN ] </span>
+                        </div>
+                        <p id="preview-caption" class="font-typewriter text-[11px] italic text-stone-800">Fig. 1 — Chief Engineer inspecting the copper dynamo.</p>
+                    </div>
+
+                    <!-- For Sale / Classifieds Box -->
+                    <div class="border-2 border-stone-900 p-4 bg-[#f1e6d0]">
+                        <h4 class="font-headline text-center text-xs font-bold uppercase tracking-widest border-b border-stone-900 pb-1 mb-3">★ NAGBEBENTA NG MGA SUMUSUNOD ★</h4>
+                        <div id="preview-classifieds-list" class="space-y-3 text-xs font-body">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t-2 border-stone-900 pt-3 mt-8 flex justify-between items-center text-xs font-typewriter uppercase">
+                <span id="preview-publisher">IBARRA CRISOSTOMO</span>
+                <span>★ CIUDAD DE PASEO ★</span>
+                <span>ESTABLISHED 1869</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript Logic with localStorage Persistence -->
+    <script>
+        const STORAGE_KEY = 'gazette_poster_data_v1';
+
+        // Default Data Structure
+        const defaultData = {
+            title: "Ang Pang-araw-araw na Pabalitaan",
+            date: "October 14, 1900",
+            price: "CIUDAD DE PASEO",
+            publisher: "IBARRA CRISOSTOMO",
+            headline: "PARA SA MAMAMAYAN NG CIUDAD DE PASEO!",
+            subhead: "",
+            body: "Pinapayuhan ang mga mamamayan na maging mapagmatyag sa mga taong hindi kilala at sa mga alok na wari bang napakaganda upang maging totoo. Huwag basta magbigay ng salapi, mahahalagang kagamitan, o personal na impormasyon. Hindi lahat ng nakangiti ay kaibigan, at hindi lahat ng nangangakong magpapayaman sa inyo ay may gintong puso. Kung ang alok ay kahina-hinala, mag-isip muna bago kumagat. Baka ang inaakala ninyong biyaya ay bitag na may kasamang pagsisisi.",
+            caption: "TG-8175",
+            secHeadline: "IPINAGBIBILING SARISARING KAGAMITAN",
+            secBody: "Ipinababatid sa lahat ng mamamayang may pangangailangan sa sarisaring kagamitan na aking ipinagbibili ang mga kagamitang kapaki-pakinabang sa araw-araw. mayroong iba't ibang gamit na angkop sa inyong pangangailangan, mapaghanapbuhay man, pang-araw-araw, o pansariling pangangailangan. sa mga nais bumili, mangyaring magpadala ng sagot sa pamamagitan ng telegrama upang mapag-usapan ang uri ng kagamitan, halaga, at paraan ng pagbili. tandaan: ang kagamitang nasa iyong kamay ay may halaga, ngunit ang kagamitang nabili sa tamang halaga ay may dagdag na saya!",
+            borderStyle: "border-style-double",
+            stampType: "ibarra",
+            stampColor: "stamp-black",
+            photoSrc: "",
+            classifiedItems: [
+                { title: "Genuine Patent Leather Boots", desc: "Slightly worn, fit for gentleman of distinction.", price: "$20" },
+                { title: "Steam-Powered Washing Apparatus", desc: "Saves hours of domestic toil. Inquire at Room 4B.", price: "$12.50" },
+            ]
+        };
+
+        // Load data from localStorage or fallback to defaults
+        function loadSavedData() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                return saved ? JSON.parse(saved) : defaultData;
+            } catch(e) {
+                return defaultData;
+            }
+        }
+
+        let appData = loadSavedData();
+
+        // Save data to localStorage
+        function saveData() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            } catch(e) {
+                console.error("Could not save to localStorage", e);
+            }
+        }
+
+        // DOM elements mapping
+        const inputs = {
+            title: document.getElementById('input-title'),
+            date: document.getElementById('input-date'),
+            price: document.getElementById('input-price'),
+            publisher: document.getElementById('input-publisher'),
+            headline: document.getElementById('input-headline'),
+            subhead: document.getElementById('input-subhead'),
+            body: document.getElementById('input-body'),
+            caption: document.getElementById('input-caption'),
+            secHeadline: document.getElementById('input-sec-headline'),
+            secBody: document.getElementById('input-sec-body'),
+            borderStyle: document.getElementById('select-border-style'),
+            stampType: document.getElementById('select-stamp-type'),
+            stampColor: document.getElementById('select-stamp-color')
+        };
+
+        const previews = {
+            title: document.getElementById('preview-title'),
+            date: document.getElementById('preview-date'),
+            price: document.getElementById('preview-price'),
+            publisher: document.getElementById('preview-publisher'),
+            headline: document.getElementById('preview-headline'),
+            subhead: document.getElementById('preview-subhead'),
+            body: document.getElementById('preview-body'),
+            dropCap: document.getElementById('drop-cap'),
+            caption: document.getElementById('preview-caption'),
+            secHeadline: document.getElementById('preview-sec-headline'),
+            secBody: document.getElementById('preview-sec-body')
+        };
+
+        const posterContainer = document.getElementById('poster-container');
+        const filigreeCorners = document.querySelectorAll('.filigree-corner');
+        const stampOverlay = document.getElementById('stamp-overlay');
+        const previewImage = document.getElementById('preview-image');
+        const placeholderText = document.getElementById('image-placeholder-text');
+
+        // Populate form inputs and render preview from appData
+        function populateUI() {
+            inputs.title.value = appData.title;
+            inputs.date.value = appData.date;
+            inputs.price.value = appData.price;
+            inputs.publisher.value = appData.publisher;
+            inputs.headline.value = appData.headline;
+            inputs.subhead.value = appData.subhead;
+            inputs.body.value = appData.body;
+            inputs.caption.value = appData.caption;
+            inputs.secHeadline.value = appData.secHeadline;
+            inputs.secBody.value = appData.secBody;
+            inputs.borderStyle.value = appData.borderStyle;
+            inputs.stampType.value = appData.stampType;
+            inputs.stampColor.value = appData.stampColor;
+
+            // Render text previews
+            previews.title.textContent = appData.title;
+            previews.date.textContent = appData.date;
+            previews.price.textContent = appData.price;
+            previews.publisher.textContent = appData.publisher;
+            previews.headline.textContent = appData.headline;
+            previews.subhead.textContent = appData.subhead;
+            previews.caption.textContent = appData.caption;
+            previews.secHeadline.textContent = appData.secHeadline;
+            previews.secBody.textContent = appData.secBody;
+
+            // Body & Drop Cap
+            if (appData.body.length > 0) {
+                previews.dropCap.textContent = appData.body.charAt(0).toUpperCase();
+                previews.body.textContent = appData.body.slice(1);
+            } else {
+                previews.dropCap.textContent = '';
+                previews.body.textContent = '';
+            }
+
+            // Border style
+            posterContainer.classList.remove(
+                'border-style-double', 'border-style-solid', 'border-style-dotted', 
+                'border-style-thick-thin', 'border-style-filigree', 'border-style-gothic', 'border-style-greek'
+            );
+            posterContainer.classList.add(appData.borderStyle);
+            if (appData.borderStyle === 'border-style-filigree') {
+                filigreeCorners.forEach(c => c.style.display = 'block');
+            } else {
+                filigreeCorners.forEach(c => c.style.display = 'none');
+            }
+
+            // Stamp
+            updateStampDisplay();
+
+            // Photo
+            if (appData.photoSrc) {
+                previewImage.src = appData.photoSrc;
+                previewImage.classList.remove('hidden');
+                placeholderText.classList.add('hidden');
+            }
+
+            renderClassifieds();
+        }
+
+        function updateStampDisplay() {
+            const type = appData.stampType;
+            const colorClass = appData.stampColor;
+
+            stampOverlay.className = 'absolute top-10 right-10 stamp-badge ' + colorClass;
+
+            if (type === 'none') {
+                stampOverlay.innerHTML = '';
+                stampOverlay.classList.add('hidden');
+            } else {
+                stampOverlay.classList.remove('hidden');
+                if (type === 'ibarra') {
+                    stampOverlay.innerHTML = `
+                        <div class="stamp-circular-ibarra">
+                            <div class="text-[9px] tracking-widest uppercase font-bold">★ SEAL OF ★</div>
+                            <div class="text-[12px] font-bold leading-tight my-0.5">IBARRA CRISOSTOMO</div>
+                            <div class="text-[8px] tracking-widest font-typewriter">OFFICIAL GAZETTE</div>
+                            <div class="text-[9px] mt-0.5 font-bold">1890</div>
+                        </div>
+                    `;
+                } else {
+                    stampOverlay.innerHTML = `<div class="stamp-rectangular">${type.toUpperCase()}</div>`;
+                }
+            }
+        }
+
+        // Attach Event Listeners for Live Binding & Saving
+        inputs.title.addEventListener('input', (e) => { appData.title = e.target.value; previews.title.textContent = e.target.value; saveData(); });
+        inputs.date.addEventListener('input', (e) => { appData.date = e.target.value; previews.date.textContent = e.target.value; saveData(); });
+        inputs.price.addEventListener('input', (e) => { appData.price = e.target.value; previews.price.textContent = e.target.value; saveData(); });
+        inputs.publisher.addEventListener('input', (e) => { appData.publisher = e.target.value; previews.publisher.textContent = e.target.value; saveData(); });
+        inputs.headline.addEventListener('input', (e) => { appData.headline = e.target.value; previews.headline.textContent = e.target.value; saveData(); });
+        inputs.subhead.addEventListener('input', (e) => { appData.subhead = e.target.value; previews.subhead.textContent = e.target.value; saveData(); });
+        
+        inputs.body.addEventListener('input', (e) => {
+            appData.body = e.target.value;
+            if (e.target.value.length > 0) {
+                previews.dropCap.textContent = e.target.value.charAt(0).toUpperCase();
+                previews.body.textContent = e.target.value.slice(1);
+            } else {
+                previews.dropCap.textContent = '';
+                previews.body.textContent = '';
+            }
+            saveData();
+        });
+
+        inputs.caption.addEventListener('input', (e) => { appData.caption = e.target.value; previews.caption.textContent = e.target.value; saveData(); });
+        inputs.secHeadline.addEventListener('input', (e) => { appData.secHeadline = e.target.value; previews.secHeadline.textContent = e.target.value; saveData(); });
+        inputs.secBody.addEventListener('input', (e) => { appData.secBody = e.target.value; previews.secBody.textContent = e.target.value; saveData(); });
+
+        inputs.borderStyle.addEventListener('change', (e) => {
+            appData.borderStyle = e.target.value;
+            posterContainer.classList.remove(
+                'border-style-double', 'border-style-solid', 'border-style-dotted', 
+                'border-style-thick-thin', 'border-style-filigree', 'border-style-gothic', 'border-style-greek'
+            );
+            posterContainer.classList.add(e.target.value);
+            if (e.target.value === 'border-style-filigree') {
+                filigreeCorners.forEach(c => c.style.display = 'block');
+            } else {
+                filigreeCorners.forEach(c => c.style.display = 'none');
+            }
+            saveData();
+        });
+
+        inputs.stampType.addEventListener('change', (e) => {
+            appData.stampType = e.target.value;
+            updateStampDisplay();
+            saveData();
+        });
+
+        inputs.stampColor.addEventListener('change', (e) => {
+            appData.stampColor = e.target.value;
+            updateStampDisplay();
+            saveData();
+        });
+
+        // Photo Uploader
+        const photoInput = document.getElementById('input-photo');
+        if (photoInput) {
+            photoInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        appData.photoSrc = event.target.result;
+                        previewImage.src = event.target.result;
+                        previewImage.classList.remove('hidden');
+                        placeholderText.classList.add('hidden');
+                        saveData();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Classifieds Manager
+        function renderClassifieds() {
+            const editorList = document.getElementById('classifieds-editor-list');
+            const previewList = document.getElementById('preview-classifieds-list');
+            
+            if (!editorList || !previewList) return;
+
+            editorList.innerHTML = '';
+            previewList.innerHTML = '';
+
+            appData.classifiedItems.forEach((item, index) => {
+                // Editor Row
+                const row = document.createElement('div');
+                row.className = 'bg-stone-900 p-2.5 rounded border border-stone-700 space-y-2';
+                row.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-amber-400">Item #${index + 1}</span>
+                        <button onclick="removeClassifiedItem(${index})" class="text-red-400 hover:text-red-300 text-xs">Remove</button>
+                    </div>
+                    <input type="text" value="${item.title.replace(/"/g, '&quot;')}" oninput="updateClassified(${index}, 'title', this.value)" placeholder="Item Title" class="w-full bg-stone-950 border border-stone-700 rounded px-2 py-1 text-xs text-stone-200">
+                    <input type="text" value="${item.desc.replace(/"/g, '&quot;')}" oninput="updateClassified(${index}, 'desc', this.value)" placeholder="Description" class="w-full bg-stone-950 border border-stone-700 rounded px-2 py-1 text-xs text-stone-200">
+                    <input type="text" value="${item.price.replace(/"/g, '&quot;')}" oninput="updateClassified(${index}, 'price', this.value)" placeholder="Price" class="w-full bg-stone-950 border border-stone-700 rounded px-2 py-1 text-xs text-stone-200">
+                `;
+                editorList.appendChild(row);
+
+                // Preview Item
+                const pItem = document.createElement('div');
+                pItem.className = 'border-b border-stone-900/40 pb-2 last:border-b-0';
+                pItem.innerHTML = `
+                    <div class="font-bold text-stone-950">• ${item.title} — <span class="italic font-typewriter text-[11px]">${item.price}</span></div>
+                    <div class="text-stone-800 text-[11px] mt-0.5">${item.desc}</div>
+                `;
+                previewList.appendChild(pItem);
+            });
+        }
+
+        function addClassifiedItem() {
+            appData.classifiedItems.push({ title: "Bagong Ibebenta", desc: "Description of goods or service offered.", price: "$" });
+            renderClassifieds();
+            saveData();
+        }
+
+        function removeClassifiedItem(index) {
+            appData.classifiedItems.splice(index, 1);
+            renderClassifieds();
+            saveData();
+        }
+
+        function updateClassified(index, field, value) {
+            appData.classifiedItems[index][field] = value;
+            const previewList = document.getElementById('preview-classifieds-list');
+            if (previewList && previewList.children[index]) {
+                previewList.children[index].innerHTML = `
+                    <div class="font-bold text-stone-950">• ${appData.classifiedItems[index].title} — <span class="italic font-typewriter text-[11px]">${appData.classifiedItems[index].price}</span></div>
+                    <div class="text-stone-800 text-[11px] mt-0.5">${appData.classifiedItems[index].desc}</div>
+                `;
+            }
+            saveData();
+        }
+
+        function resetToDefaults() {
+            if (confirm("Are you sure you want to reset all poster details to defaults?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                appData = JSON.parse(JSON.stringify(defaultData));
+                populateUI();
+            }
+        }
+
+        // Download as PNG Handler
+        function downloadAsPNG() {
+            const poster = document.getElementById('poster-container');
+            html2canvas(poster, {
+                scale: 2,
+                backgroundColor: '#f6ecdc',
+                useCORS: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '1890s-news-poster.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // Initialize on DOM load
+        window.addEventListener('DOMContentLoaded', () => {
+            populateUI();
+        });
+    </script>
+</body>
+</html>
